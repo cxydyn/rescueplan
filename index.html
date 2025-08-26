@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rescue Plan - Alat Anotasi Visual</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- PDF.js for PDF rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
+    
+    <!-- jsPDF for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- IDB Library for IndexedDB -->
+    <script src="https://cdn.jsdelivr.net/npm/idb@7/build/umd.js"></script>
+
+    <style>
+        /* Custom styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            overscroll-behavior: none;
+        }
+        /* Custom scrollbar for a cleaner look */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #a8a8a8; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #888; }
+
+        .hidden-file-input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+        
+        #drawing-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            touch-action: none;
+        }
+
+        .color-swatch {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.1s ease-in-out;
+        }
+        .color-swatch.active {
+            border-color: #3b82f6; /* blue-500 */
+            transform: scale(1.2);
+        }
+        .tool-btn.active {
+            background-color: #dbeafe; /* blue-100 */
+            color: #2563eb; /* blue-600 */
+        }
+        #text-input-overlay {
+            position: absolute;
+            border: 1px dashed #3b82f6;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 4px;
+            font-size: 16px;
+            outline: none;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 overflow-hidden">
+
+    <div class="flex h-screen">
+        <!-- Sidebar Kiri -->
+        <aside class="w-1/4 bg-white border-r border-gray-200 flex flex-col">
+            <div class="p-4 border-b border-gray-200">
+                <h1 class="text-2xl font-bold text-gray-700">Rescue Plan</h1>
+                <p class="text-sm text-gray-500">Alat Anotasi Visual</p>
+            </div>
+            
+            <div class="p-4 space-y-4">
+                <button id="new-project-btn" class="w-full bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center space-x-2 shadow-sm hover:shadow-md">
+                    <i data-lucide="plus-circle" class="w-5 h-5"></i>
+                    <span>Proyek Baru</span>
+                </button>
+                <label for="import-project-input" class="w-full cursor-pointer bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors flex items-center justify-center space-x-2">
+                    <i data-lucide="upload" class="w-5 h-5"></i>
+                    <span>Unggah Proyek (.json)</span>
+                </label>
+                <input type="file" id="import-project-input" class="hidden-file-input" accept=".json">
+            </div>
+
+            <div class="flex-grow overflow-y-auto px-4">
+                <h2 class="text-lg font-semibold text-gray-600 mb-2 sticky top-0 bg-white py-2">Daftar Proyek</h2>
+                <div id="project-list" class="space-y-2">
+                    <!-- Daftar proyek akan diisi oleh JavaScript -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- Konten Utama -->
+        <main class="w-3/4 flex flex-col bg-gray-200">
+            <header class="bg-white p-2 border-b border-gray-200 flex justify-between items-center flex-shrink-0 shadow-sm z-10">
+                <h2 id="current-project-name" class="text-xl font-bold text-gray-700 truncate pl-2">Pilih atau buat proyek</h2>
+                <div id="main-controls" class="flex items-center space-x-2">
+                     <button id="rescue-plan-details-btn" class="bg-yellow-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-yellow-600 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:bg-gray-400" title="Detail Rescue Plan">
+                        <i data-lucide="file-text" class="w-5 h-5"></i>
+                    </button>
+                    <div class="h-8 border-l border-gray-300"></div>
+                    <button id="pan-mode-btn" class="tool-btn p-2 rounded-md disabled:opacity-50" title="Mode Geser & Zoom (P)">
+                        <i data-lucide="move" class="w-5 h-5"></i>
+                    </button>
+                    <button id="draw-mode-btn" class="tool-btn p-2 rounded-md disabled:opacity-50" title="Mode Menggambar (D)">
+                        <i data-lucide="pencil" class="w-5 h-5"></i>
+                    </button>
+                    <div class="h-8 border-l border-gray-300"></div>
+                    <button id="zoom-in-btn" class="p-2 rounded-md hover:bg-gray-200 disabled:opacity-50" title="Perbesar">
+                        <i data-lucide="zoom-in" class="w-5 h-5"></i>
+                    </button>
+                    <button id="zoom-out-btn" class="p-2 rounded-md hover:bg-gray-200 disabled:opacity-50" title="Perkecil">
+                        <i data-lucide="zoom-out" class="w-5 h-5"></i>
+                    </button>
+                    <button id="reset-zoom-btn" class="p-2 rounded-md hover:bg-gray-200 disabled:opacity-50" title="Reset Zoom">
+                        <i data-lucide="maximize" class="w-5 h-5"></i>
+                    </button>
+                    <div class="h-8 border-l border-gray-300"></div>
+                    <button id="export-report-btn" class="bg-green-500 text-white font-bold py-2 px-3 rounded-lg hover:bg-green-600 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:bg-gray-400" title="Ekspor Laporan & Data">
+                        <i data-lucide="file-down" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </header>
+            
+            <!-- Toolbar Menggambar -->
+            <div id="drawing-toolbar" class="bg-white p-2 border-b border-gray-200 flex-shrink-0 items-center space-x-4 hidden z-10">
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm font-medium">Alat:</span>
+                    <button id="select-tool-btn" class="tool-btn p-2 rounded-md" title="Pilih & Pindah"><i data-lucide="mouse-pointer" class="w-5 h-5"></i></button>
+                    <button id="brush-tool-btn" class="tool-btn p-2 rounded-md" title="Kuas"><i data-lucide="pencil" class="w-5 h-5"></i></button>
+                    <button id="line-tool-btn" class="tool-btn p-2 rounded-md" title="Garis"><i data-lucide="minus" class="w-5 h-5"></i></button>
+                    <button id="arrow-tool-btn" class="tool-btn p-2 rounded-md" title="Panah"><i data-lucide="arrow-right" class="w-5 h-5"></i></button>
+                    <button id="rectangle-tool-btn" class="tool-btn p-2 rounded-md" title="Kotak"><i data-lucide="square" class="w-5 h-5"></i></button>
+                    <button id="circle-tool-btn" class="tool-btn p-2 rounded-md" title="Lingkaran"><i data-lucide="circle" class="w-5 h-5"></i></button>
+                    <button id="text-tool-btn" class="tool-btn p-2 rounded-md" title="Teks"><i data-lucide="type" class="w-5 h-5"></i></button>
+                </div>
+                 <div class="h-8 border-l border-gray-300"></div>
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm font-medium">Warna:</span>
+                    <div id="color-palette" class="flex items-center space-x-1">
+                        <div class="color-swatch bg-red-500" data-color="#ef4444"></div>
+                        <div class="color-swatch bg-yellow-400" data-color="#facc15"></div>
+                        <div class="color-swatch bg-blue-500" data-color="#3b82f6"></div>
+                        <div class="color-swatch bg-green-500" data-color="#22c55e"></div>
+                        <div class="color-swatch bg-black" data-color="#000000"></div>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <label for="brush-size" class="text-sm font-medium">Ukuran:</label>
+                    <input type="range" id="brush-size" min="2" max="50" value="5" class="w-24">
+                </div>
+                <div class="flex items-center space-x-2">
+                    <label for="brush-opacity" class="text-sm font-medium">Transparansi:</label>
+                    <input type="range" id="brush-opacity" min="0.1" max="1" step="0.1" value="0.7" class="w-24">
+                </div>
+                <div class="flex items-center space-x-4 ml-auto">
+                    <button id="eraser-btn" class="tool-btn p-2 rounded-md" title="Penghapus (E)">
+                        <i data-lucide="eraser" class="w-5 h-5"></i>
+                    </button>
+                    <button id="undo-btn" class="p-2 rounded-md hover:bg-gray-200 disabled:opacity-50" title="Undo (Ctrl+Z)">
+                        <i data-lucide="undo-2" class="w-5 h-5"></i>
+                    </button>
+                    <button id="clear-canvas-btn" class="p-2 rounded-md hover:bg-red-100 text-red-600" title="Hapus Semua Gambar">
+                        <i data-lucide="trash-2" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div id="canvas-container" class="flex-grow overflow-hidden cursor-grab active:cursor-grabbing relative">
+                <div id="image-wrapper" class="relative transform-origin-top-left">
+                    <img id="main-image" src="" alt="Denah Proyek" class="max-w-none shadow-lg bg-white">
+                    <canvas id="drawing-canvas"></canvas>
+                </div>
+                <div id="placeholder-text" class="absolute inset-0 flex items-center justify-center text-gray-500 text-2xl">
+                    Mulai dengan membuat proyek baru atau mengunggah denah.
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal: Proyek Baru -->
+    <div id="new-project-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
+            <h3 class="text-2xl font-bold mb-6">Buat Proyek Baru</h3>
+            <form id="new-project-form">
+                <div class="mb-4">
+                    <label for="project-name" class="block text-sm font-medium text-gray-700 mb-1">Nama Proyek</label>
+                    <input type="text" id="project-name" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
+                </div>
+                <div class="mb-6">
+                    <label for="project-image" class="block text-sm font-medium text-gray-700 mb-1">Unggah Denah (JPG, PNG, PDF)</label>
+                    <input type="file" id="project-image" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" accept=".jpg,.jpeg,.png,.pdf" required>
+                </div>
+                <div class="flex justify-end space-x-4">
+                    <button type="button" id="cancel-new-project" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Batal</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">Buat</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Pemilih Halaman PDF -->
+    <div id="pdf-page-selector-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-6xl h-5/6 flex flex-col">
+            <h3 class="text-2xl font-bold mb-4">Pilih Halaman PDF</h3>
+            <div class="flex-grow flex gap-4 overflow-hidden">
+                <div id="pdf-thumbnails" class="w-1/4 border-r pr-4 overflow-y-auto space-y-2"></div>
+                <div class="w-3/4 flex flex-col items-center justify-center bg-gray-100 rounded-md overflow-hidden relative">
+                    <div class="absolute top-2 right-2 z-10 bg-white p-1 rounded-md shadow">
+                        <button id="pdf-preview-zoom-in" class="p-1 hover:bg-gray-200 rounded"><i data-lucide="zoom-in" class="w-5 h-5"></i></button>
+                        <button id="pdf-preview-zoom-out" class="p-1 hover:bg-gray-200 rounded"><i data-lucide="zoom-out" class="w-5 h-5"></i></button>
+                    </div>
+                    <div id="pdf-preview-container" class="w-full h-full overflow-auto flex items-center justify-center">
+                        <canvas id="pdf-preview-canvas" class="shadow-lg"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-4 mt-4">
+                <button type="button" id="cancel-pdf-selection" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Batal</button>
+                <button type="button" id="confirm-pdf-page" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">Pilih Halaman Ini</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal: Rescue Plan Details -->
+    <div id="rescue-plan-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-3xl max-h-[90vh] flex flex-col">
+            <h3 class="text-2xl font-bold mb-6 flex-shrink-0">Detail Formulir Rescue Plan</h3>
+            <form id="rescue-plan-form" class="flex-grow overflow-y-auto pr-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                    <div>
+                        <label for="rp-location" class="block text-sm font-medium text-gray-700">Lokasi / Location</label>
+                        <input type="text" id="rp-location" class="mt-1 w-full border-gray-300 rounded-md shadow-sm">
+                    </div>
+                    <div>
+                        <label for="rp-date" class="block text-sm font-medium text-gray-700">Tanggal / Date</label>
+                        <input type="date" id="rp-date" class="mt-1 w-full border-gray-300 rounded-md shadow-sm">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="rp-job-description" class="block text-sm font-medium text-gray-700">Jenis Pekerjaan / Job Description</label>
+                        <input type="text" id="rp-job-description" class="mt-1 w-full border-gray-300 rounded-md shadow-sm">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="rp-potential-hazard" class="block text-sm font-medium text-gray-700">Potensi Bahaya / Scenario</label>
+                        <textarea id="rp-potential-hazard" rows="3" class="mt-1 w-full border-gray-300 rounded-md shadow-sm"></textarea>
+                    </div>
+                    <div>
+                        <label for="rp-personnel-count" class="block text-sm font-medium text-gray-700">Jumlah Pekerja / Number of Personnel</label>
+                        <input type="number" id="rp-personnel-count" class="mt-1 w-full border-gray-300 rounded-md shadow-sm">
+                    </div>
+                    <div class="md:col-span-2">
+                        <h4 class="text-md font-semibold text-gray-800 mt-4 border-b pb-2 mb-2">Anggota Rescue / Rescue Team</h4>
+                        <div id="rp-rescue-team-container" class="space-y-2">
+                        </div>
+                        <button type="button" id="rp-add-team-member" class="mt-2 text-sm text-blue-600 hover:text-blue-800 flex items-center space-x-1">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            <span>Tambah Anggota</span>
+                        </button>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="rp-emergency-plan" class="block text-sm font-medium text-gray-700">Rencana Darurat / Emergency Plan</label>
+                        <textarea id="rp-emergency-plan" rows="4" class="mt-1 w-full border-gray-300 rounded-md shadow-sm"></textarea>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="rp-rescue-equipment" class="block text-sm font-medium text-gray-700">Peralatan yang digunakan untuk rescue / Rescue Equipment</label>
+                        <textarea id="rp-rescue-equipment" rows="4" class="mt-1 w-full border-gray-300 rounded-md shadow-sm"></textarea>
+                    </div>
+                </div>
+            </form>
+            <div class="flex justify-end space-x-4 mt-6 flex-shrink-0">
+                <button type="button" id="cancel-rescue-plan" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Batal</button>
+                <button type="button" id="save-rescue-plan" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Alert/Message Box -->
+    <div id="alert-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-sm text-center">
+            <h3 id="alert-title" class="text-xl font-bold mb-4">Pemberitahuan</h3>
+            <p id="alert-message" class="text-gray-600 mb-6"></p>
+            <button id="alert-ok-btn" class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">OK</button>
+        </div>
+    </div>
+    
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] hidden">
+        <div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-sm text-center">
+            <svg class="animate-spin h-8 w-8 text-blue-500 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p id="loading-message" class="text-gray-600">Memproses...</p>
+        </div>
+    </div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    lucide.createIcons();
+
+    // --- State Aplikasi ---
+    let appState = {
+        projects: {},
+        activeProjectName: null,
+        transform: { x: 0, y: 0, scale: 1 },
+        isPanning: false,
+        panStart: { x: 0, y: 0 },
+        pdfDoc: null,
+        pdfTotalPages: 0,
+        pdfSelectedPage: 1,
+        pdfPreviewScale: 1.0,
+        drawing: {
+            mode: 'pan', // 'pan' or 'draw'
+            tool: 'select', // 'select', 'brush', 'line', 'arrow', 'rectangle', 'circle', 'text', 'eraser'
+            color: '#ef4444',
+            size: 5,
+            opacity: 0.7,
+            shapes: [],
+            selectedShape: null,
+            isDragging: false,
+            dragStartPoint: { x: 0, y: 0 },
+            originalShapeState: null,
+        },
+    };
+
+    // --- Elemen DOM ---
+    const DOMElements = {
+        // Buttons
+        newProjectBtn: document.getElementById('new-project-btn'),
+        importProjectInput: document.getElementById('import-project-input'),
+        zoomInBtn: document.getElementById('zoom-in-btn'),
+        zoomOutBtn: document.getElementById('zoom-out-btn'),
+        resetZoomBtn: document.getElementById('reset-zoom-btn'),
+        exportReportBtn: document.getElementById('export-report-btn'),
+        rescuePlanDetailsBtn: document.getElementById('rescue-plan-details-btn'),
+        panModeBtn: document.getElementById('pan-mode-btn'),
+        drawModeBtn: document.getElementById('draw-mode-btn'),
+        // Containers & Lists
+        projectList: document.getElementById('project-list'),
+        canvasContainer: document.getElementById('canvas-container'),
+        imageWrapper: document.getElementById('image-wrapper'),
+        // Images & Placeholders
+        mainImage: document.getElementById('main-image'),
+        drawingCanvas: document.getElementById('drawing-canvas'),
+        placeholderText: document.getElementById('placeholder-text'),
+        currentProjectName: document.getElementById('current-project-name'),
+        // Modals
+        newProjectModal: document.getElementById('new-project-modal'),
+        pdfSelectorModal: document.getElementById('pdf-page-selector-modal'),
+        alertModal: document.getElementById('alert-modal'),
+        rescuePlanModal: document.getElementById('rescue-plan-modal'),
+        // Forms
+        newProjectForm: document.getElementById('new-project-form'),
+        rescuePlanForm: document.getElementById('rescue-plan-form'),
+        // Drawing Toolbar
+        drawingToolbar: document.getElementById('drawing-toolbar'),
+        selectToolBtn: document.getElementById('select-tool-btn'),
+        brushToolBtn: document.getElementById('brush-tool-btn'),
+        lineToolBtn: document.getElementById('line-tool-btn'),
+        arrowToolBtn: document.getElementById('arrow-tool-btn'),
+        rectangleToolBtn: document.getElementById('rectangle-tool-btn'),
+        circleToolBtn: document.getElementById('circle-tool-btn'),
+        textToolBtn: document.getElementById('text-tool-btn'),
+        colorPalette: document.getElementById('color-palette'),
+        brushSize: document.getElementById('brush-size'),
+        brushOpacity: document.getElementById('brush-opacity'),
+        eraserBtn: document.getElementById('eraser-btn'),
+        undoBtn: document.getElementById('undo-btn'),
+        clearCanvasBtn: document.getElementById('clear-canvas-btn'),
+        // Rescue Plan Modal elements
+        addTeamMemberBtn: document.getElementById('rp-add-team-member'),
+        rescueTeamContainer: document.getElementById('rp-rescue-team-container'),
+        saveRescuePlanBtn: document.getElementById('save-rescue-plan'),
+        cancelRescuePlanBtn: document.getElementById('cancel-rescue-plan'),
+        // Loader
+        loadingOverlay: document.getElementById('loading-overlay'),
+        loadingMessage: document.getElementById('loading-message'),
+    };
+
+    const drawingCtx = DOMElements.drawingCanvas.getContext('2d');
+    let db;
+
+    // --- FUNGSI DATABASE (INDEXEDDB) ---
+
+    async function initDB() {
+        db = await idb.openDB('RescuePlanDB', 1, {
+            upgrade(db) {
+                const projectStore = db.createObjectStore('projects', {
+                    keyPath: 'name',
+                });
+                db.createObjectStore('appState', { keyPath: 'id' });
+            },
+        });
+    }
+
+    async function saveState() {
+        try {
+            if (appState.activeProjectName) {
+                const project = appState.projects[appState.activeProjectName];
+                if(project) {
+                    project.shapes = appState.drawing.shapes;
+                    await db.put('projects', project);
+                }
+            }
+            await db.put('appState', { id: 'lastActive', projectName: appState.activeProjectName });
+        } catch (error) {
+            console.error("Gagal menyimpan state ke IndexedDB:", error);
+            showAlert("Gagal menyimpan data. Silakan coba lagi.");
+        }
+    }
+
+    async function loadState() {
+        const allProjects = await db.getAll('projects');
+        appState.projects = allProjects.reduce((acc, project) => {
+            acc[project.name] = project;
+            return acc;
+        }, {});
+        
+        const lastState = await db.get('appState', 'lastActive');
+        if (lastState) {
+            appState.activeProjectName = lastState.projectName;
+        }
+    }
+
+    // --- FUNGSI UTAMA ---
+
+    const showLoader = (message = 'Memproses...') => {
+        DOMElements.loadingMessage.textContent = message;
+        DOMElements.loadingOverlay.classList.remove('hidden');
+    };
+
+    const hideLoader = () => {
+        DOMElements.loadingOverlay.classList.add('hidden');
+    };
+
+    const showAlert = (message, title = "Pemberitahuan") => {
+        document.getElementById('alert-title').textContent = title;
+        document.getElementById('alert-message').textContent = message;
+        DOMElements.alertModal.classList.remove('hidden');
+    };
+
+    // --- RENDER FUNCTIONS ---
+
+    const renderProjectList = () => {
+        DOMElements.projectList.innerHTML = '';
+        const projectNames = Object.keys(appState.projects);
+        if (projectNames.length === 0) {
+            DOMElements.projectList.innerHTML = '<p class="text-gray-500 text-sm p-2">Belum ada proyek.</p>';
+            return;
+        }
+        
+        projectNames.sort().forEach(name => {
+            const isActive = name === appState.activeProjectName;
+            const projectItem = document.createElement('div');
+            projectItem.className = `p-3 rounded-lg cursor-pointer flex justify-between items-center transition-colors ${isActive ? 'bg-blue-100 text-blue-800 font-semibold' : 'hover:bg-gray-100'}`;
+            projectItem.dataset.projectName = name;
+            
+            projectItem.innerHTML = `
+                <span class="truncate">${name}</span>
+                <div class="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button class="export-project-btn p-1 hover:bg-blue-200 rounded-full" title="Ekspor Proyek (.json)">
+                        <i data-lucide="download" class="w-4 h-4 text-blue-600"></i>
+                    </button>
+                    <button class="delete-project-btn p-1 hover:bg-red-200 rounded-full" title="Hapus Proyek">
+                        <i data-lucide="trash-2" class="w-4 h-4 text-red-600"></i>
+                    </button>
+                </div>
+            `;
+            
+            projectItem.addEventListener('click', (e) => {
+                if (!e.target.closest('button')) {
+                    switchProject(name);
+                }
+            });
+
+            projectItem.classList.add('group');
+            DOMElements.projectList.appendChild(projectItem);
+        });
+        lucide.createIcons();
+    };
+
+    const redrawCanvas = () => {
+        clearDrawingCanvas();
+        appState.drawing.shapes.forEach(shape => drawShape(shape));
+
+        if (appState.drawing.selectedShape) {
+            const shape = appState.drawing.selectedShape;
+            const bounds = getShapeBounds(shape);
+            drawingCtx.strokeStyle = '#3b82f6';
+            drawingCtx.lineWidth = 2;
+            drawingCtx.setLineDash([6, 3]);
+            drawingCtx.strokeRect(bounds.x - 5, bounds.y - 5, bounds.w + 10, bounds.h + 10);
+            drawingCtx.setLineDash([]);
+        }
+    };
+    
+    const updateTransform = () => {
+        DOMElements.imageWrapper.style.transform = `translate(${appState.transform.x}px, ${appState.transform.y}px) scale(${appState.transform.scale})`;
+    };
+
+    const updateActionButtonsState = (enabled) => {
+        const buttons = ['zoomInBtn', 'zoomOutBtn', 'resetZoomBtn', 'exportReportBtn', 'rescuePlanDetailsBtn', 'panModeBtn', 'drawModeBtn'];
+        buttons.forEach(btn => DOMElements[btn].disabled = !enabled);
+    };
+    
+    // --- MANAJEMEN PROYEK ---
+
+    async function createNewProject(name, imageData) {
+        if (appState.projects[name]) {
+            showAlert(`Proyek dengan nama "${name}" sudah ada.`);
+            hideLoader();
+            return;
+        }
+        const newProject = {
+            name: name,
+            imageData: imageData,
+            shapes: [],
+            rescuePlan: {},
+            createdAt: new Date().toISOString()
+        };
+        appState.projects[name] = newProject;
+        await db.put('projects', newProject);
+        
+        switchProject(name);
+        hideLoader();
+    };
+
+    const switchProject = (projectName) => {
+        if (projectName && !appState.projects[projectName]) {
+            return;
+        }
+
+        appState.activeProjectName = projectName;
+        const project = projectName ? appState.projects[projectName] : null;
+
+        if (!project) {
+            appState.drawing.shapes = [];
+            DOMElements.mainImage.src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+            DOMElements.placeholderText.classList.remove('hidden');
+            DOMElements.currentProjectName.textContent = 'Pilih atau buat proyek';
+            updateActionButtonsState(false);
+        } else {
+            appState.drawing.shapes = project.shapes || [];
+            DOMElements.placeholderText.classList.add('hidden');
+            DOMElements.mainImage.src = project.imageData;
+            DOMElements.currentProjectName.textContent = appState.activeProjectName;
+            updateActionButtonsState(true);
+        }
+        
+        resetTransform();
+        renderProjectList();
+        redrawCanvas();
+        saveState();
+    };
+
+    async function deleteProject(projectName) {
+        if (confirm(`Apakah Anda yakin ingin menghapus proyek "${projectName}"? Tindakan ini tidak dapat diurungkan.`)) {
+            delete appState.projects[projectName];
+            await db.delete('projects', projectName);
+
+            if (appState.activeProjectName === projectName) {
+                appState.activeProjectName = null;
+                switchProject(Object.keys(appState.projects)[0] || null);
+            }
+            renderProjectList();
+        }
+    };
+
+    const exportProject = (projectName) => {
+        const projectData = appState.projects[projectName];
+        if (!projectData) return;
+
+        const dataStr = JSON.stringify(projectData, null, 2);
+        const dataBlob = new Blob([dataStr], {type: "application/json"});
+        const url = URL.createObjectURL(dataBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${projectName.replace(/\s+/g, '_')}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    async function importProject(file) {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const projectData = JSON.parse(e.target.result);
+                if (projectData.name && projectData.imageData) {
+                    if (appState.projects[projectData.name]) {
+                         if (!confirm(`Proyek "${projectData.name}" sudah ada. Timpa?`)) return;
+                    }
+                    projectData.rescuePlan = projectData.rescuePlan || {};
+                    projectData.shapes = projectData.shapes || [];
+                    
+                    appState.projects[projectData.name] = projectData;
+                    await db.put('projects', projectData);
+
+                    renderProjectList();
+                    switchProject(projectData.name);
+                    showAlert(`Proyek "${projectData.name}" berhasil diimpor.`);
+                } else {
+                    showAlert("File JSON tidak valid.", "Gagal Impor");
+                }
+            } catch (error) {
+                showAlert("Gagal memuat file JSON.", "Gagal Impor");
+            }
+        };
+        reader.readAsText(file);
+    };
+
+    // --- INTERAKSI KANVAS & ZOOM/PAN ---
+
+    const resetTransform = () => {
+        appState.transform = { x: 0, y: 0, scale: 1 };
+        updateTransform();
+    };
+
+    const handleZoom = (direction) => {
+        const scaleAmount = 0.1;
+        const newScale = direction === 'in' 
+            ? appState.transform.scale + scaleAmount
+            : appState.transform.scale - scaleAmount;
+        appState.transform.scale = Math.max(0.1, Math.min(newScale, 5));
+        updateTransform();
+    };
+
+    const handlePanStart = (e) => {
+        if (appState.drawing.mode !== 'pan') return;
+        e.preventDefault();
+        appState.isPanning = true;
+        appState.panStart.x = e.clientX - appState.transform.x;
+        appState.panStart.y = e.clientY - appState.transform.y;
+        DOMElements.canvasContainer.style.cursor = 'grabbing';
+    };
+
+    const handlePanMove = (e) => {
+        if (!appState.isPanning) return;
+        e.preventDefault();
+        appState.transform.x = e.clientX - appState.panStart.x;
+        appState.transform.y = e.clientY - appState.panStart.y;
+        updateTransform();
+    };
+
+    const handlePanEnd = () => {
+        if (appState.drawing.mode !== 'pan') return;
+        appState.isPanning = false;
+        DOMElements.canvasContainer.style.cursor = 'grab';
+    };
+
+    // --- LOGIKA MENGGAMBAR (OBJECT-BASED) ---
+
+    const setMode = (mode) => {
+        appState.drawing.mode = mode;
+        DOMElements.panModeBtn.classList.toggle('active', mode === 'pan');
+        DOMElements.drawModeBtn.classList.toggle('active', mode === 'draw');
+        
+        if (mode === 'draw') {
+            DOMElements.drawingToolbar.classList.remove('hidden');
+            DOMElements.drawingToolbar.classList.add('flex');
+            setTool(appState.drawing.tool);
+        } else {
+            DOMElements.drawingToolbar.classList.add('hidden');
+            DOMElements.drawingToolbar.classList.remove('flex');
+            DOMElements.canvasContainer.style.cursor = 'grab';
+        }
+    };
+
+    const setTool = (tool) => {
+        appState.drawing.tool = tool;
+        document.querySelectorAll('#drawing-toolbar .tool-btn').forEach(btn => btn.classList.remove('active'));
+        DOMElements[tool + 'ToolBtn'].classList.add('active');
+        DOMElements.canvasContainer.style.cursor = tool === 'select' ? 'default' : (tool === 'text' ? 'text' : 'crosshair');
+    };
+
+    const getBrushColor = (opacity) => {
+        const color = appState.drawing.color;
+        const finalOpacity = opacity !== undefined ? opacity : appState.drawing.opacity;
+        if (color === '#000000') return `rgba(0,0,0,${finalOpacity})`;
+        const r = parseInt(color.slice(1, 3), 16);
+        const g = parseInt(color.slice(3, 5), 16);
+        const b = parseInt(color.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${finalOpacity})`;
+    };
+    
+    const addShape = (shape) => {
+        shape.id = Date.now();
+        appState.drawing.shapes.push(shape);
+        redrawCanvas();
+        saveState();
+    };
+
+    const handleCanvasMouseDown = (e) => {
+        if (e.button !== 0) return;
+        const { x, y } = getCanvasCoordinates(e);
+
+        if (appState.drawing.tool === 'select') {
+            const selected = getShapeAt(x, y);
+            appState.drawing.selectedShape = selected;
+            if (selected) {
+                appState.drawing.isDragging = true;
+                appState.drawing.dragStartPoint = { x, y };
+                appState.drawing.originalShapeState = JSON.parse(JSON.stringify(selected)); // Deep copy
+            }
+            redrawCanvas();
+        } else {
+            appState.drawing.isDrawing = true;
+            appState.drawing.startX = x;
+            appState.drawing.startY = y;
+            if (appState.drawing.tool === 'text') {
+                handleTextTool(e);
+                appState.drawing.isDrawing = false;
+            } else if (appState.drawing.tool === 'brush' || appState.drawing.tool === 'eraser') {
+                 addShape({ type: appState.drawing.tool, points: [{x, y}], color: appState.drawing.color, size: appState.drawing.size, opacity: appState.drawing.opacity });
+            }
+        }
+    };
+
+    const handleCanvasMouseMove = (e) => {
+        const { x, y } = getCanvasCoordinates(e);
+        
+        if (appState.drawing.tool === 'select') {
+            const shapeUnderCursor = getShapeAt(x, y);
+            DOMElements.drawingCanvas.style.cursor = shapeUnderCursor ? 'move' : 'default';
+            if (appState.drawing.isDragging && appState.drawing.selectedShape) {
+                const dx = x - appState.drawing.dragStartPoint.x;
+                const dy = y - appState.drawing.dragStartPoint.y;
+                const original = appState.drawing.originalShapeState;
+                const shape = appState.drawing.selectedShape;
+
+                if (shape.type === 'brush' || shape.type === 'eraser') {
+                    shape.points = original.points.map(p => ({ x: p.x + dx, y: p.y + dy }));
+                } else if (shape.type === 'line' || shape.type === 'arrow') {
+                    shape.x1 = original.x1 + dx;
+                    shape.y1 = original.y1 + dy;
+                    shape.x2 = original.x2 + dx;
+                    shape.y2 = original.y2 + dy;
+                } else { // rectangle, circle, text
+                    shape.x = original.x + dx;
+                    shape.y = original.y + dy;
+                }
+                redrawCanvas();
+            }
+        } else if (appState.drawing.isDrawing) {
+            if (appState.drawing.tool === 'brush' || appState.drawing.tool === 'eraser') {
+                const currentPath = appState.drawing.shapes[appState.drawing.shapes.length - 1];
+                currentPath.points.push({x, y});
+            }
+            redrawCanvas();
+            const tempShape = {
+                type: appState.drawing.tool,
+                x: appState.drawing.startX, y: appState.drawing.startY,
+                x1: appState.drawing.startX, y1: appState.drawing.startY,
+                x2: x, y2: y,
+                width: x - appState.drawing.startX, height: y - appState.drawing.startY,
+                radius: Math.hypot(x - appState.drawing.startX, y - appState.drawing.startY),
+                color: appState.drawing.color, size: appState.drawing.size, opacity: appState.drawing.opacity
+            };
+            drawShape(tempShape);
+        }
+    };
+
+    const handleCanvasMouseUp = (e) => {
+        if (appState.drawing.tool === 'select') {
+            if(appState.drawing.isDragging) {
+                appState.drawing.isDragging = false;
+                appState.drawing.originalShapeState = null;
+                saveState();
+            }
+        } else if (appState.drawing.isDrawing) {
+            appState.drawing.isDrawing = false;
+            const { x, y } = getCanvasCoordinates(e);
+            const newShape = {
+                type: appState.drawing.tool,
+                x: appState.drawing.startX, y: appState.drawing.startY,
+                x1: appState.drawing.startX, y1: appState.drawing.startY,
+                x2: x, y2: y,
+                width: x - appState.drawing.startX, height: y - appState.drawing.startY,
+                radius: Math.hypot(x - appState.drawing.startX, y - appState.drawing.startY),
+                color: appState.drawing.color, size: appState.drawing.size, opacity: appState.drawing.opacity
+            };
+            if (['rectangle', 'circle', 'line', 'arrow'].includes(appState.drawing.tool)) {
+                addShape(newShape);
+            } else {
+                 saveState();
+            }
+        }
+    };
+
+    const handleTextTool = (e) => {
+        const { x, y } = getCanvasCoordinates(e);
+        const textInput = document.createElement('input');
+        textInput.type = 'text';
+        textInput.id = 'text-input-overlay';
+        textInput.style.left = `${e.clientX}px`;
+        textInput.style.top = `${e.clientY}px`;
+        textInput.style.color = appState.drawing.color;
+        textInput.style.fontSize = `${appState.drawing.size * 2}px`;
+        
+        document.body.appendChild(textInput);
+        textInput.focus();
+
+        const finalizeText = () => {
+            if (textInput.value) {
+                addShape({ type: 'text', text: textInput.value, x, y, color: appState.drawing.color, size: appState.drawing.size, opacity: appState.drawing.opacity });
+            }
+            if(document.body.contains(textInput)) document.body.removeChild(textInput);
+        };
+
+        textInput.addEventListener('blur', finalizeText);
+        textInput.addEventListener('keydown', (evt) => {
+            if (evt.key === 'Enter') finalizeText();
+            if (evt.key === 'Escape') if(document.body.contains(textInput)) document.body.removeChild(textInput);
+        });
+    };
+
+    const getCanvasCoordinates = (e) => {
+        const rect = DOMElements.drawingCanvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return {
+            x: (clientX - rect.left),
+            y: (clientY - rect.top)
+        };
+    };
+    
+    const clearDrawingCanvas = () => {
+        drawingCtx.clearRect(0, 0, DOMElements.drawingCanvas.width, DOMElements.drawingCanvas.height);
+    };
+
+    const undoLast = () => {
+        if (appState.drawing.shapes.length > 0) {
+            appState.drawing.shapes.pop();
+            redrawCanvas();
+            saveState();
+        }
+    };
+    
+    // --- FUNGSI MENGGAMBAR & DETEKSI BENTUK ---
+
+    function drawShape(shape) {
+        drawingCtx.lineWidth = shape.size;
+        drawingCtx.lineCap = 'round';
+        drawingCtx.lineJoin = 'round';
+        drawingCtx.strokeStyle = getBrushColor(shape.opacity);
+        drawingCtx.fillStyle = getBrushColor(shape.opacity);
+        drawingCtx.globalCompositeOperation = shape.type === 'eraser' ? 'destination-out' : 'source-over';
+
+        switch (shape.type) {
+            case 'brush':
+            case 'eraser':
+                if (shape.points.length < 2) return;
+                drawingCtx.beginPath();
+                drawingCtx.moveTo(shape.points[0].x, shape.points[0].y);
+                for (let i = 1; i < shape.points.length; i++) {
+                    drawingCtx.lineTo(shape.points[i].x, shape.points[i].y);
+                }
+                drawingCtx.stroke();
+                break;
+            case 'line':
+                drawingCtx.beginPath();
+                drawingCtx.moveTo(shape.x1, shape.y1);
+                drawingCtx.lineTo(shape.x2, shape.y2);
+                drawingCtx.stroke();
+                break;
+            case 'arrow':
+                const headlen = shape.size * 2;
+                const angle = Math.atan2(shape.y2 - shape.y1, shape.x2 - shape.x1);
+                drawingCtx.beginPath();
+                drawingCtx.moveTo(shape.x1, shape.y1);
+                drawingCtx.lineTo(shape.x2, shape.y2);
+                drawingCtx.lineTo(shape.x2 - headlen * Math.cos(angle - Math.PI / 6), shape.y2 - headlen * Math.sin(angle - Math.PI / 6));
+                drawingCtx.moveTo(shape.x2, shape.y2);
+                drawingCtx.lineTo(shape.x2 - headlen * Math.cos(angle + Math.PI / 6), shape.y2 - headlen * Math.sin(angle + Math.PI / 6));
+                drawingCtx.stroke();
+                break;
+            case 'rectangle':
+                drawingCtx.strokeRect(shape.x, shape.y, shape.width, shape.height);
+                break;
+            case 'circle':
+                drawingCtx.beginPath();
+                drawingCtx.arc(shape.x, shape.y, shape.radius, 0, 2 * Math.PI);
+                drawingCtx.stroke();
+                break;
+            case 'text':
+                drawingCtx.textBaseline = 'top';
+                drawingCtx.textAlign = 'left';
+                drawingCtx.font = `${shape.size * 2}px sans-serif`;
+                drawingCtx.fillText(shape.text, shape.x, shape.y);
+                break;
+        }
+    }
+
+    function getShapeAt(x, y) {
+        for (let i = appState.drawing.shapes.length - 1; i >= 0; i--) {
+            const shape = appState.drawing.shapes[i];
+            const bounds = getShapeBounds(shape);
+            if (x >= bounds.x && x <= bounds.x + bounds.w && y >= bounds.y && y <= bounds.y + bounds.h) {
+                return shape;
+            }
+        }
+        return null;
+    }
+
+    function getShapeBounds(shape) {
+        const buffer = (shape.size || 5) / 2 + 5; // Buffer for easier selection
+        switch (shape.type) {
+            case 'line':
+            case 'arrow':
+                return {
+                    x: Math.min(shape.x1, shape.x2) - buffer,
+                    y: Math.min(shape.y1, shape.y2) - buffer,
+                    w: Math.abs(shape.x1 - shape.x2) + buffer * 2,
+                    h: Math.abs(shape.y1 - shape.y2) + buffer * 2
+                };
+            case 'rectangle':
+                return {
+                    x: Math.min(shape.x, shape.x + shape.width) - buffer,
+                    y: Math.min(shape.y, shape.y + shape.height) - buffer,
+                    w: Math.abs(shape.width) + buffer * 2,
+                    h: Math.abs(shape.height) + buffer * 2
+                };
+            case 'circle':
+                return {
+                    x: shape.x - shape.radius - buffer,
+                    y: shape.y - shape.radius - buffer,
+                    w: shape.radius * 2 + buffer * 2,
+                    h: shape.radius * 2 + buffer * 2
+                };
+            case 'text':
+                drawingCtx.font = `${shape.size * 2}px sans-serif`;
+                const metrics = drawingCtx.measureText(shape.text);
+                return {
+                    x: shape.x - buffer,
+                    y: shape.y - buffer,
+                    w: metrics.width + buffer * 2,
+                    h: shape.size * 2 + buffer * 2
+                };
+            case 'brush':
+            case 'eraser':
+                if (!shape.points || shape.points.length === 0) return { x: 0, y: 0, w: 0, h: 0 };
+                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                shape.points.forEach(p => {
+                    minX = Math.min(minX, p.x);
+                    minY = Math.min(minY, p.y);
+                    maxX = Math.max(maxX, p.x);
+                    maxY = Math.max(maxY, p.y);
+                });
+                return { x: minX - buffer, y: minY - buffer, w: (maxX - minX) + buffer*2, h: (maxY - minY) + buffer*2 };
+            default:
+                return { x: 0, y: 0, w: 0, h: 0 };
+        }
+    }
+
+    // --- MANAJEMEN RESCUE PLAN FORM ---
+    const openRescuePlanModal = () => {
+        const project = appState.projects[appState.activeProjectName];
+        if (!project) return;
+        const data = project.rescuePlan || {};
+        document.getElementById('rp-location').value = data.location || '';
+        document.getElementById('rp-date').value = data.date || '';
+        document.getElementById('rp-job-description').value = data.jobDescription || '';
+        document.getElementById('rp-potential-hazard').value = data.potentialHazard || '';
+        document.getElementById('rp-personnel-count').value = data.personnelCount || '';
+        document.getElementById('rp-emergency-plan').value = data.emergencyPlan || '';
+        document.getElementById('rp-rescue-equipment').value = data.rescueEquipment || '';
+        DOMElements.rescueTeamContainer.innerHTML = '';
+        if (data.team && data.team.length > 0) {
+            data.team.forEach(member => addTeamMemberRow(member.name, member.role));
+        } else {
+            addTeamMemberRow();
+        }
+        DOMElements.rescuePlanModal.classList.remove('hidden');
+    };
+
+    const closeRescuePlanModal = () => DOMElements.rescuePlanModal.classList.add('hidden');
+
+    const saveRescuePlan = () => {
+        const project = appState.projects[appState.activeProjectName];
+        if (!project) return;
+        const team = [];
+        DOMElements.rescueTeamContainer.querySelectorAll('.team-member-row').forEach(row => {
+            const name = row.querySelector('.team-member-name').value;
+            const role = row.querySelector('.team-member-role').value;
+            if (name || role) team.push({ name, role });
+        });
+        project.rescuePlan = {
+            location: document.getElementById('rp-location').value,
+            date: document.getElementById('rp-date').value,
+            jobDescription: document.getElementById('rp-job-description').value,
+            potentialHazard: document.getElementById('rp-potential-hazard').value,
+            personnelCount: document.getElementById('rp-personnel-count').value,
+            emergencyPlan: document.getElementById('rp-emergency-plan').value,
+            rescueEquipment: document.getElementById('rp-rescue-equipment').value,
+            team: team,
+        };
+        saveState();
+        closeRescuePlanModal();
+        showAlert("Detail Rescue Plan berhasil disimpan.");
+    };
+
+    const addTeamMemberRow = (name = '', role = '') => {
+        const row = document.createElement('div');
+        row.className = 'team-member-row flex items-center space-x-2';
+        row.innerHTML = `
+            <input type="text" placeholder="Nama Anggota" class="team-member-name w-1/2 border-gray-300 rounded-md shadow-sm text-sm" value="${name}">
+            <input type="text" placeholder="Tugas / Responsible" class="team-member-role w-1/2 border-gray-300 rounded-md shadow-sm text-sm" value="${role}">
+            <button type="button" class="remove-team-member-btn text-red-500 hover:text-red-700">
+                <i data-lucide="minus-circle" class="w-5 h-5"></i>
+            </button>
+        `;
+        row.querySelector('.remove-team-member-btn').addEventListener('click', () => row.remove());
+        DOMElements.rescueTeamContainer.appendChild(row);
+        lucide.createIcons();
+    };
+
+    // --- PENANGANAN FILE & PDF ---
+    const handleFileSelect = (file) => {
+        if (!file) return;
+        showLoader('Membaca file...');
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const projectName = document.getElementById('project-name').value;
+            if (file.type.startsWith('image/')) {
+                createNewProject(projectName, e.target.result);
+                DOMElements.newProjectModal.classList.add('hidden');
+                DOMElements.newProjectForm.reset();
+            } else if (file.type === 'application/pdf') {
+                loadPdf(e.target.result);
+            } else {
+                showAlert("Format file tidak didukung. Silakan unggah JPG, PNG, atau PDF.");
+                hideLoader();
+            }
+        };
+        reader.onerror = () => {
+            showAlert("Gagal membaca file.");
+            hideLoader();
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const loadPdf = (dataUrl) => {
+        showLoader('Memuat PDF...');
+        const loadingTask = pdfjsLib.getDocument(dataUrl);
+        loadingTask.promise.then(pdf => {
+            appState.pdfDoc = pdf;
+            appState.pdfTotalPages = pdf.numPages;
+            appState.pdfSelectedPage = 1;
+            if (pdf.numPages === 1) {
+                showLoader('Merender halaman PDF...');
+                renderPdfPageAsImage(1).then(imageData => {
+                    const projectName = document.getElementById('project-name').value;
+                    createNewProject(projectName, imageData);
+                    DOMElements.newProjectModal.classList.add('hidden');
+                    DOMElements.newProjectForm.reset();
+                });
+            } else {
+                openPdfSelectorModal();
+                hideLoader();
+            }
+        }).catch(err => {
+            showAlert("Gagal memuat file PDF.");
+            hideLoader();
+        });
+    };
+    
+    const openPdfSelectorModal = async () => {
+        const modal = DOMElements.pdfSelectorModal;
+        const thumbnailsContainer = document.getElementById('pdf-thumbnails');
+        thumbnailsContainer.innerHTML = '<p>Memuat thumbnails...</p>';
+        modal.classList.remove('hidden');
+
+        renderPdfPreview(1);
+        
+        thumbnailsContainer.innerHTML = '';
+        for (let i = 1; i <= appState.pdfTotalPages; i++) {
+            const page = await appState.pdfDoc.getPage(i);
+            const viewport = page.getViewport({ scale: 0.3 });
+            const canvas = document.createElement('canvas');
+            canvas.className = 'w-full border-2 border-transparent hover:border-blue-500 cursor-pointer rounded-md';
+            if (i === 1) canvas.classList.add('border-blue-500');
+            canvas.dataset.pageNum = i;
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+            
+            canvas.addEventListener('click', () => {
+                document.querySelectorAll('#pdf-thumbnails canvas').forEach(c => c.classList.remove('border-blue-500'));
+                canvas.classList.add('border-blue-500');
+                appState.pdfSelectedPage = i;
+                renderPdfPreview(i);
+            });
+            thumbnailsContainer.appendChild(canvas);
+        }
+    };
+    
+    const renderPdfPreview = async (pageNum) => {
+        const page = await appState.pdfDoc.getPage(pageNum);
+        const viewport = page.getViewport({ scale: appState.pdfPreviewScale });
+        const canvas = document.getElementById('pdf-preview-canvas');
+        const context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        await page.render({ canvasContext: context, viewport: viewport }).promise;
+    };
+    
+    const renderPdfPageAsImage = async (pageNum) => {
+        const page = await appState.pdfDoc.getPage(pageNum);
+        const viewport = page.getViewport({ scale: 2.0 });
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        await page.render({ canvasContext: context, viewport: viewport }).promise;
+        return canvas.toDataURL('image/jpeg', 0.9);
+    };
+
+    // --- PEMBUATAN LAPORAN ---
+    const generateReport = async () => {
+        const { jsPDF } = window.jspdf;
+        if (!appState.activeProjectName) return;
+
+        showLoader('Membuat laporan...');
+        exportProject(appState.activeProjectName);
+
+        const project = appState.projects[appState.activeProjectName];
+        const rpData = project.rescuePlan || {};
+        
+        const baseImage = new Image();
+        baseImage.src = project.imageData;
+        await new Promise(resolve => baseImage.onload = resolve);
+
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = baseImage.naturalWidth;
+        tempCanvas.height = baseImage.naturalHeight;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.drawImage(baseImage, 0, 0);
+
+        let originalCtx = drawingCtx;
+        drawingCtx = tempCtx;
+        (project.shapes || []).forEach(shape => drawShape(shape));
+        drawingCtx = originalCtx;
+        
+        const combinedImage = tempCanvas.toDataURL('image/jpeg', 0.9);
+
+        const orientation = tempCanvas.width > tempCanvas.height ? 'l' : 'p';
+        const doc = new jsPDF({
+            orientation: orientation,
+            unit: 'pt',
+            format: [tempCanvas.width, tempCanvas.height]
+        });
+
+        doc.addImage(combinedImage, 'JPEG', 0, 0, tempCanvas.width, tempCanvas.height);
+        
+        doc.addPage('a4', 'p');
+        doc.setFontSize(22);
+        doc.text(`Formulir Rescue Plan: ${project.name}`, 40, 60);
+
+        const rescuePlanBody = [
+            { title: 'Lokasi / Location:', content: rpData.location },
+            { title: 'Tanggal / Date:', content: rpData.date },
+            { title: 'Jenis Pekerjaan / Job Description:', content: rpData.jobDescription },
+            { title: 'Jumlah Pekerja / Number of Personnel:', content: rpData.personnelCount },
+            { title: 'Potensi Bahaya / Scenario:', content: rpData.potentialHazard },
+            { title: 'Rencana Darurat / Emergency Plan:', content: rpData.emergencyPlan },
+            { title: 'Peralatan Rescue / Rescue Equipment:', content: rpData.rescueEquipment },
+        ];
+        
+        doc.autoTable({
+            startY: 80, theme: 'grid', head: [['Deskripsi', 'Detail']],
+            body: rescuePlanBody.map(item => [item.title, item.content || '-']),
+            styles: { font: 'helvetica', fontSize: 10 },
+            headStyles: { fillColor: [22, 160, 133] },
+            columnStyles: { 0: { fontStyle: 'bold', cellWidth: 200 } }
+        });
+
+        if (rpData.team && rpData.team.length > 0) {
+            doc.autoTable({
+                startY: doc.autoTable.previous.finalY + 20, theme: 'striped',
+                head: [['Anggota Tim Rescue', 'Tugas / Responsible']],
+                body: rpData.team.map(member => [member.name, member.role]),
+                headStyles: { fillColor: [41, 128, 185] },
+            });
+        }
+
+        doc.save(`Laporan_${project.name.replace(/\s+/g, '_')}.pdf`);
+        hideLoader();
+    };
+
+
+    // --- EVENT LISTENERS ---
+    const setupEventListeners = () => {
+        DOMElements.newProjectBtn.addEventListener('click', () => DOMElements.newProjectModal.classList.remove('hidden'));
+        document.getElementById('cancel-new-project').addEventListener('click', () => {
+            DOMElements.newProjectModal.classList.add('hidden');
+            DOMElements.newProjectForm.reset();
+        });
+        DOMElements.newProjectForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const imageFile = document.getElementById('project-image').files[0];
+            handleFileSelect(imageFile);
+        });
+
+        document.getElementById('confirm-pdf-page').addEventListener('click', async () => {
+            showLoader('Membuat gambar dari PDF...');
+            const imageData = await renderPdfPageAsImage(appState.pdfSelectedPage);
+            const projectName = document.getElementById('project-name').value;
+            createNewProject(projectName, imageData);
+            DOMElements.newProjectModal.classList.add('hidden');
+            DOMElements.newProjectForm.reset();
+            DOMElements.pdfSelectorModal.classList.add('hidden');
+        });
+        document.getElementById('cancel-pdf-selection').addEventListener('click', () => DOMElements.pdfSelectorModal.classList.add('hidden'));
+
+        DOMElements.projectList.addEventListener('click', (e) => {
+            const deleteBtn = e.target.closest('.delete-project-btn');
+            const exportBtn = e.target.closest('.export-project-btn');
+            if (deleteBtn) deleteProject(deleteBtn.closest('[data-project-name]').dataset.projectName);
+            if (exportBtn) exportProject(exportBtn.closest('[data-project-name]').dataset.projectName);
+        });
+
+        DOMElements.importProjectInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) importProject(file);
+            e.target.value = null;
+        });
+
+        DOMElements.panModeBtn.addEventListener('click', () => setMode('pan'));
+        DOMElements.drawModeBtn.addEventListener('click', () => setMode('draw'));
+        DOMElements.zoomInBtn.addEventListener('click', () => handleZoom('in'));
+        DOMElements.zoomOutBtn.addEventListener('click', () => handleZoom('out'));
+        DOMElements.resetZoomBtn.addEventListener('click', resetTransform);
+        DOMElements.exportReportBtn.addEventListener('click', generateReport);
+        DOMElements.rescuePlanDetailsBtn.addEventListener('click', openRescuePlanModal);
+
+        DOMElements.selectToolBtn.addEventListener('click', () => setTool('select'));
+        DOMElements.brushToolBtn.addEventListener('click', () => setTool('brush'));
+        DOMElements.lineToolBtn.addEventListener('click', () => setTool('line'));
+        DOMElements.arrowToolBtn.addEventListener('click', () => setTool('arrow'));
+        DOMElements.rectangleToolBtn.addEventListener('click', () => setTool('rectangle'));
+        DOMElements.circleToolBtn.addEventListener('click', () => setTool('circle'));
+        DOMElements.textToolBtn.addEventListener('click', () => setTool('text'));
+        DOMElements.eraserBtn.addEventListener('click', () => setTool('eraser'));
+        
+        DOMElements.colorPalette.addEventListener('click', (e) => {
+            if (e.target.classList.contains('color-swatch')) {
+                appState.drawing.color = e.target.dataset.color;
+                if(appState.drawing.tool === 'eraser') setTool('brush');
+                document.querySelectorAll('.color-swatch').forEach(sw => sw.classList.remove('active'));
+                e.target.classList.add('active');
+            }
+        });
+        DOMElements.brushSize.addEventListener('input', (e) => appState.drawing.size = e.target.value);
+        DOMElements.brushOpacity.addEventListener('input', (e) => appState.drawing.opacity = e.target.value);
+        
+        DOMElements.undoBtn.addEventListener('click', undoLast);
+        DOMElements.clearCanvasBtn.addEventListener('click', () => {
+            if (confirm('Hapus semua gambar di kanvas?')) {
+                appState.drawing.shapes = [];
+                redrawCanvas();
+                saveState();
+            }
+        });
+
+        DOMElements.drawingCanvas.addEventListener('mousedown', (e) => {
+            if (appState.drawing.mode === 'draw') handleCanvasMouseDown(e);
+            else handlePanStart(e);
+        });
+        DOMElements.drawingCanvas.addEventListener('mousemove', (e) => {
+            if (appState.drawing.mode === 'draw') handleCanvasMouseMove(e);
+            else handlePanMove(e);
+        });
+        window.addEventListener('mouseup', (e) => {
+            if (appState.drawing.mode === 'draw') handleCanvasMouseUp(e);
+            else handlePanEnd();
+        });
+        
+        DOMElements.saveRescuePlanBtn.addEventListener('click', saveRescuePlan);
+        DOMElements.cancelRescuePlanBtn.addEventListener('click', closeRescuePlanModal);
+        DOMElements.addTeamMemberBtn.addEventListener('click', () => addTeamMemberRow());
+        document.getElementById('alert-ok-btn').addEventListener('click', () => document.getElementById('alert-modal').classList.add('hidden'));
+        
+        window.addEventListener('keydown', (e) => {
+            if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+            if (e.key.toLowerCase() === 'd') setMode('draw');
+            if (e.key.toLowerCase() === 'p') setMode('pan');
+            if (e.key.toLowerCase() === 'e') setTool('eraser');
+            if (e.ctrlKey && e.key.toLowerCase() === 'z') undoLast();
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                if (appState.drawing.selectedShape) {
+                    appState.drawing.shapes = appState.drawing.shapes.filter(s => s.id !== appState.drawing.selectedShape.id);
+                    appState.drawing.selectedShape = null;
+                    redrawCanvas();
+                    saveState();
+                }
+            }
+        });
+    };
+
+    // --- Inisialisasi Aplikasi ---
+    async function initialize() {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js`;
+        
+        const imageResizeObserver = new ResizeObserver(entries => {
+            for (let entry of entries) {
+                const { width, height } = entry.contentRect;
+                DOMElements.drawingCanvas.width = width;
+                DOMElements.drawingCanvas.height = height;
+                redrawCanvas();
+            }
+        });
+        imageResizeObserver.observe(DOMElements.mainImage);
+        
+        await initDB();
+        await loadState();
+
+        renderProjectList();
+        if (appState.activeProjectName && appState.projects[appState.activeProjectName]) {
+            switchProject(appState.activeProjectName);
+        } else {
+            switchProject(null);
+        }
+        setMode('pan');
+        setTool('select');
+        document.querySelector('.color-swatch').classList.add('active');
+        setupEventListeners();
+    };
+
+    initialize();
+});
+</script>
+
+</body>
+</html>
