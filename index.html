@@ -243,46 +243,78 @@
     
     <!-- Modal: Rescue Plan Details -->
     <div id="rescue-plan-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-3xl max-h-[90vh] flex flex-col">
-            <h3 class="text-2xl font-bold mb-6 flex-shrink-0">Detail Formulir Rescue Plan</h3>
-            <form id="rescue-plan-form" class="flex-grow overflow-y-auto pr-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                    <div>
-                        <label for="rp-location" class="block text-sm font-medium text-gray-700">Lokasi / Location</label>
-                        <input type="text" id="rp-location" class="mt-1 w-full border-gray-300 rounded-md shadow-sm">
-                    </div>
-                    <div>
-                        <label for="rp-date" class="block text-sm font-medium text-gray-700">Tanggal / Date</label>
-                        <input type="date" id="rp-date" class="mt-1 w-full border-gray-300 rounded-md shadow-sm">
-                    </div>
-                    <div class="md:col-span-2">
-                        <label for="rp-job-description" class="block text-sm font-medium text-gray-700">Jenis Pekerjaan / Job Description</label>
-                        <input type="text" id="rp-job-description" class="mt-1 w-full border-gray-300 rounded-md shadow-sm">
-                    </div>
-                    <div class="md:col-span-2">
-                        <label for="rp-potential-hazard" class="block text-sm font-medium text-gray-700">Potensi Bahaya / Scenario</label>
-                        <textarea id="rp-potential-hazard" rows="3" class="mt-1 w-full border-gray-300 rounded-md shadow-sm"></textarea>
-                    </div>
-                    <div>
-                        <label for="rp-personnel-count" class="block text-sm font-medium text-gray-700">Jumlah Pekerja / Number of Personnel</label>
-                        <input type="number" id="rp-personnel-count" class="mt-1 w-full border-gray-300 rounded-md shadow-sm">
-                    </div>
-                    <div class="md:col-span-2">
-                        <h4 class="text-md font-semibold text-gray-800 mt-4 border-b pb-2 mb-2">Anggota Rescue / Rescue Team</h4>
-                        <div id="rp-rescue-team-container" class="space-y-2">
+        <div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <h3 class="text-2xl font-bold mb-6 flex-shrink-0">RESCUE PLAN</h3>
+            <form id="rescue-plan-form" class="flex-grow overflow-y-auto pr-4 space-y-4 text-sm">
+                <div class="grid grid-cols-5 gap-4 border p-4 rounded-md">
+                    <div class="col-span-3 space-y-2">
+                        <div class="flex items-center">
+                            <label class="w-1/3 font-semibold">Lokasi / Location</label>
+                            <input type="text" id="rp-location" class="w-2/3 border-gray-300 rounded-md shadow-sm">
                         </div>
-                        <button type="button" id="rp-add-team-member" class="mt-2 text-sm text-blue-600 hover:text-blue-800 flex items-center space-x-1">
-                            <i data-lucide="plus" class="w-4 h-4"></i>
-                            <span>Tambah Anggota</span>
-                        </button>
+                        <div class="flex items-center">
+                            <label class="w-1/3 font-semibold">Jenis Pekerjaan / Job Description</label>
+                            <input type="text" id="rp-job-description" class="w-2/3 border-gray-300 rounded-md shadow-sm">
+                        </div>
                     </div>
-                    <div class="md:col-span-2">
-                        <label for="rp-emergency-plan" class="block text-sm font-medium text-gray-700">Rencana Darurat / Emergency Plan</label>
-                        <textarea id="rp-emergency-plan" rows="4" class="mt-1 w-full border-gray-300 rounded-md shadow-sm"></textarea>
+                    <div class="col-span-2 space-y-2">
+                         <div class="flex items-center">
+                            <label class="w-1/3 font-semibold">Tanggal / Date</label>
+                            <input type="date" id="rp-date" class="w-2/3 border-gray-300 rounded-md shadow-sm">
+                        </div>
                     </div>
-                    <div class="md:col-span-2">
-                        <label for="rp-rescue-equipment" class="block text-sm font-medium text-gray-700">Peralatan yang digunakan untuk rescue / Rescue Equipment</label>
-                        <textarea id="rp-rescue-equipment" rows="4" class="mt-1 w-full border-gray-300 rounded-md shadow-sm"></textarea>
+                     <div class="col-span-5">
+                        <label class="font-semibold block mb-1">Potensi Bahaya / Scenario</label>
+                        <textarea id="rp-potential-hazard" rows="3" class="w-full border-gray-300 rounded-md shadow-sm"></textarea>
+                    </div>
+                     <div class="col-span-5">
+                        <label class="font-semibold">Jumlah Pekerja / Number of Personnel</label>
+                        <input type="number" id="rp-personnel-count" class="ml-2 border-gray-300 rounded-md shadow-sm">
+                    </div>
+                </div>
+
+                <div class="border p-4 rounded-md">
+                    <div class="grid grid-cols-2 gap-x-8">
+                         <h4 class="col-span-1 font-semibold">Anggota Rescue / Rescue Team</h4>
+                         <h4 class="col-span-1 font-semibold">Tugas / Responsible</h4>
+                    </div>
+                    <div id="rp-rescue-team-container" class="mt-2 space-y-2">
+                    </div>
+                    <button type="button" id="rp-add-team-member" class="mt-2 text-sm text-blue-600 hover:text-blue-800 flex items-center space-x-1">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <span>Tambah Anggota</span>
+                    </button>
+                </div>
+
+                <div class="border p-4 rounded-md">
+                    <label class="font-semibold block mb-1">Rencana Darurat / Emergency Plan</label>
+                    <textarea id="rp-emergency-plan" rows="4" class="w-full border-gray-300 rounded-md shadow-sm"></textarea>
+                </div>
+                <div class="border p-4 rounded-md">
+                    <label class="font-semibold block mb-1">Peralatan yang digunakan untuk rescue / Rescue Equipment</label>
+                    <textarea id="rp-rescue-equipment" rows="4" class="w-full border-gray-300 rounded-md shadow-sm"></textarea>
+                </div>
+
+                <div class="pt-4 mt-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div class="border p-4 rounded-md">
+                            <label class="block font-semibold text-gray-700 text-center">Dibuat / Prepared By:</label>
+                            <div class="mt-8 h-12 border-b"></div>
+                            <input type="text" id="rp-prepared-name" placeholder="Nama / Name" class="mt-2 w-full border-gray-300 rounded-md shadow-sm text-center">
+                            <input type="date" id="rp-prepared-date" placeholder="Tanggal / Date" class="mt-2 w-full border-gray-300 rounded-md shadow-sm text-center">
+                        </div>
+                        <div class="border p-4 rounded-md">
+                            <label class="block font-semibold text-gray-700 text-center">Diperiksa / Checked By:</label>
+                            <div class="mt-8 h-12 border-b"></div>
+                            <input type="text" id="rp-checked-name" placeholder="Nama / Name" class="mt-2 w-full border-gray-300 rounded-md shadow-sm text-center">
+                            <input type="date" id="rp-checked-date" placeholder="Tanggal / Date" class="mt-2 w-full border-gray-300 rounded-md shadow-sm text-center">
+                        </div>
+                        <div class="border p-4 rounded-md">
+                            <label class="block font-semibold text-gray-700 text-center">Disetujui / Approved By:</label>
+                             <div class="mt-8 h-12 border-b"></div>
+                            <input type="text" id="rp-approved-name" placeholder="Nama / Name" class="mt-2 w-full border-gray-300 rounded-md shadow-sm text-center">
+                            <input type="date" id="rp-approved-date" placeholder="Tanggal / Date" class="mt-2 w-full border-gray-300 rounded-md shadow-sm text-center">
+                        </div>
                     </div>
                 </div>
             </form>
@@ -310,6 +342,22 @@
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
             <p id="loading-message" class="text-gray-600">Memproses...</p>
+        </div>
+    </div>
+
+    <!-- Modal: PDF Preview -->
+    <div id="pdf-preview-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl p-4 w-full max-w-4xl h-5/6 flex flex-col">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h3 class="text-2xl font-bold">Pratinjau Laporan</h3>
+                <div>
+                    <button id="download-pdf-btn" class="bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600">Unduh PDF</button>
+                    <button id="close-preview-btn" class="ml-4 px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Tutup</button>
+                </div>
+            </div>
+            <div class="flex-grow bg-gray-200 rounded-md overflow-hidden">
+                <iframe id="pdf-preview-iframe" class="w-full h-full" frameborder="0"></iframe>
+            </div>
         </div>
     </div>
 
@@ -369,6 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {
         pdfSelectorModal: document.getElementById('pdf-page-selector-modal'),
         alertModal: document.getElementById('alert-modal'),
         rescuePlanModal: document.getElementById('rescue-plan-modal'),
+        pdfPreviewModal: document.getElementById('pdf-preview-modal'),
         // Forms
         newProjectForm: document.getElementById('new-project-form'),
         rescuePlanForm: document.getElementById('rescue-plan-form'),
@@ -395,6 +444,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Loader
         loadingOverlay: document.getElementById('loading-overlay'),
         loadingMessage: document.getElementById('loading-message'),
+        // PDF Preview
+        pdfPreviewIframe: document.getElementById('pdf-preview-iframe'),
+        downloadPdfBtn: document.getElementById('download-pdf-btn'),
+        closePreviewBtn: document.getElementById('close-preview-btn'),
     };
 
     const drawingCtx = DOMElements.drawingCanvas.getContext('2d');
@@ -501,7 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const redrawCanvas = () => {
         clearDrawingCanvas();
-        appState.drawing.shapes.forEach(shape => drawShape(shape));
+        appState.drawing.shapes.forEach(shape => drawShape(drawingCtx, shape));
 
         if (appState.drawing.selectedShape) {
             const shape = appState.drawing.selectedShape;
@@ -777,7 +830,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 radius: Math.hypot(x - appState.drawing.startX, y - appState.drawing.startY),
                 color: appState.drawing.color, size: appState.drawing.size, opacity: appState.drawing.opacity
             };
-            drawShape(tempShape);
+            drawShape(drawingCtx, tempShape);
         }
     };
 
@@ -859,55 +912,55 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- FUNGSI MENGGAMBAR & DETEKSI BENTUK ---
 
-    function drawShape(shape) {
-        drawingCtx.lineWidth = shape.size;
-        drawingCtx.lineCap = 'round';
-        drawingCtx.lineJoin = 'round';
-        drawingCtx.strokeStyle = getBrushColor(shape.opacity);
-        drawingCtx.fillStyle = getBrushColor(shape.opacity);
-        drawingCtx.globalCompositeOperation = shape.type === 'eraser' ? 'destination-out' : 'source-over';
+    function drawShape(ctx, shape) {
+        ctx.lineWidth = shape.size;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = getBrushColor(shape.opacity);
+        ctx.fillStyle = getBrushColor(shape.opacity);
+        ctx.globalCompositeOperation = shape.type === 'eraser' ? 'destination-out' : 'source-over';
 
         switch (shape.type) {
             case 'brush':
             case 'eraser':
                 if (shape.points.length < 2) return;
-                drawingCtx.beginPath();
-                drawingCtx.moveTo(shape.points[0].x, shape.points[0].y);
+                ctx.beginPath();
+                ctx.moveTo(shape.points[0].x, shape.points[0].y);
                 for (let i = 1; i < shape.points.length; i++) {
-                    drawingCtx.lineTo(shape.points[i].x, shape.points[i].y);
+                    ctx.lineTo(shape.points[i].x, shape.points[i].y);
                 }
-                drawingCtx.stroke();
+                ctx.stroke();
                 break;
             case 'line':
-                drawingCtx.beginPath();
-                drawingCtx.moveTo(shape.x1, shape.y1);
-                drawingCtx.lineTo(shape.x2, shape.y2);
-                drawingCtx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(shape.x1, shape.y1);
+                ctx.lineTo(shape.x2, shape.y2);
+                ctx.stroke();
                 break;
             case 'arrow':
                 const headlen = shape.size * 2;
                 const angle = Math.atan2(shape.y2 - shape.y1, shape.x2 - shape.x1);
-                drawingCtx.beginPath();
-                drawingCtx.moveTo(shape.x1, shape.y1);
-                drawingCtx.lineTo(shape.x2, shape.y2);
-                drawingCtx.lineTo(shape.x2 - headlen * Math.cos(angle - Math.PI / 6), shape.y2 - headlen * Math.sin(angle - Math.PI / 6));
-                drawingCtx.moveTo(shape.x2, shape.y2);
-                drawingCtx.lineTo(shape.x2 - headlen * Math.cos(angle + Math.PI / 6), shape.y2 - headlen * Math.sin(angle + Math.PI / 6));
-                drawingCtx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(shape.x1, shape.y1);
+                ctx.lineTo(shape.x2, shape.y2);
+                ctx.lineTo(shape.x2 - headlen * Math.cos(angle - Math.PI / 6), shape.y2 - headlen * Math.sin(angle - Math.PI / 6));
+                ctx.moveTo(shape.x2, shape.y2);
+                ctx.lineTo(shape.x2 - headlen * Math.cos(angle + Math.PI / 6), shape.y2 - headlen * Math.sin(angle + Math.PI / 6));
+                ctx.stroke();
                 break;
             case 'rectangle':
-                drawingCtx.strokeRect(shape.x, shape.y, shape.width, shape.height);
+                ctx.strokeRect(shape.x, shape.y, shape.width, shape.height);
                 break;
             case 'circle':
-                drawingCtx.beginPath();
-                drawingCtx.arc(shape.x, shape.y, shape.radius, 0, 2 * Math.PI);
-                drawingCtx.stroke();
+                ctx.beginPath();
+                ctx.arc(shape.x, shape.y, shape.radius, 0, 2 * Math.PI);
+                ctx.stroke();
                 break;
             case 'text':
-                drawingCtx.textBaseline = 'top';
-                drawingCtx.textAlign = 'left';
-                drawingCtx.font = `${shape.size * 2}px sans-serif`;
-                drawingCtx.fillText(shape.text, shape.x, shape.y);
+                ctx.textBaseline = 'top';
+                ctx.textAlign = 'left';
+                ctx.font = `${shape.size * 2}px sans-serif`;
+                ctx.fillText(shape.text, shape.x, shape.y);
                 break;
         }
     }
@@ -985,6 +1038,14 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('rp-personnel-count').value = data.personnelCount || '';
         document.getElementById('rp-emergency-plan').value = data.emergencyPlan || '';
         document.getElementById('rp-rescue-equipment').value = data.rescueEquipment || '';
+        
+        document.getElementById('rp-prepared-name').value = data.preparedByName || '';
+        document.getElementById('rp-prepared-date').value = data.preparedByDate || '';
+        document.getElementById('rp-checked-name').value = data.checkedByName || '';
+        document.getElementById('rp-checked-date').value = data.checkedByDate || '';
+        document.getElementById('rp-approved-name').value = data.approvedByName || '';
+        document.getElementById('rp-approved-date').value = data.approvedByDate || '';
+
         DOMElements.rescueTeamContainer.innerHTML = '';
         if (data.team && data.team.length > 0) {
             data.team.forEach(member => addTeamMemberRow(member.name, member.role));
@@ -1014,6 +1075,12 @@ document.addEventListener('DOMContentLoaded', () => {
             emergencyPlan: document.getElementById('rp-emergency-plan').value,
             rescueEquipment: document.getElementById('rp-rescue-equipment').value,
             team: team,
+            preparedByName: document.getElementById('rp-prepared-name').value,
+            preparedByDate: document.getElementById('rp-prepared-date').value,
+            checkedByName: document.getElementById('rp-checked-name').value,
+            checkedByDate: document.getElementById('rp-checked-date').value,
+            approvedByName: document.getElementById('rp-approved-name').value,
+            approvedByDate: document.getElementById('rp-approved-date').value,
         };
         saveState();
         closeRescuePlanModal();
@@ -1022,13 +1089,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const addTeamMemberRow = (name = '', role = '') => {
         const row = document.createElement('div');
-        row.className = 'team-member-row flex items-center space-x-2';
+        row.className = 'team-member-row grid grid-cols-2 gap-x-8';
         row.innerHTML = `
-            <input type="text" placeholder="Nama Anggota" class="team-member-name w-1/2 border-gray-300 rounded-md shadow-sm text-sm" value="${name}">
-            <input type="text" placeholder="Tugas / Responsible" class="team-member-role w-1/2 border-gray-300 rounded-md shadow-sm text-sm" value="${role}">
-            <button type="button" class="remove-team-member-btn text-red-500 hover:text-red-700">
-                <i data-lucide="minus-circle" class="w-5 h-5"></i>
-            </button>
+            <input type="text" placeholder="Nama Anggota" class="team-member-name w-full border-gray-300 rounded-md shadow-sm text-sm" value="${name}">
+            <div class="flex items-center space-x-2">
+                <input type="text" placeholder="Tugas / Responsible" class="team-member-role w-full border-gray-300 rounded-md shadow-sm text-sm" value="${role}">
+                <button type="button" class="remove-team-member-btn text-red-500 hover:text-red-700 flex-shrink-0">
+                    <i data-lucide="minus-circle" class="w-5 h-5"></i>
+                </button>
+            </div>
         `;
         row.querySelector('.remove-team-member-btn').addEventListener('click', () => row.remove());
         DOMElements.rescueTeamContainer.appendChild(row);
@@ -1158,10 +1227,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const tempCtx = tempCanvas.getContext('2d');
         tempCtx.drawImage(baseImage, 0, 0);
 
-        let originalCtx = drawingCtx;
-        drawingCtx = tempCtx;
-        (project.shapes || []).forEach(shape => drawShape(shape));
-        drawingCtx = originalCtx;
+        (project.shapes || []).forEach(shape => drawShape(tempCtx, shape));
         
         const combinedImage = tempCanvas.toDataURL('image/jpeg', 0.9);
 
@@ -1196,16 +1262,54 @@ document.addEventListener('DOMContentLoaded', () => {
             columnStyles: { 0: { fontStyle: 'bold', cellWidth: 200 } }
         });
 
+        let finalY = doc.autoTable.previous.finalY;
+
         if (rpData.team && rpData.team.length > 0) {
             doc.autoTable({
-                startY: doc.autoTable.previous.finalY + 20, theme: 'striped',
+                startY: finalY + 20, theme: 'striped',
                 head: [['Anggota Tim Rescue', 'Tugas / Responsible']],
                 body: rpData.team.map(member => [member.name, member.role]),
                 headStyles: { fillColor: [41, 128, 185] },
             });
+            finalY = doc.autoTable.previous.finalY;
         }
 
-        doc.save(`Laporan_${project.name.replace(/\s+/g, '_')}.pdf`);
+        // Add signature section
+        finalY += 40;
+        doc.setFontSize(10);
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const margin = 40;
+        const colWidth = (pageWidth - margin * 2) / 3;
+
+        doc.text('Dibuat / Prepared By:', margin, finalY);
+        doc.text('Diperiksa / Checked By:', margin + colWidth, finalY);
+        doc.text('Disetujui / Approved By:', margin + colWidth * 2, finalY);
+        
+        finalY += 40;
+        doc.line(margin, finalY, margin + colWidth - 10, finalY);
+        doc.line(margin + colWidth, finalY, margin + colWidth * 2 - 10, finalY);
+        doc.line(margin + colWidth * 2, finalY, margin + colWidth * 3 - 10, finalY);
+
+        finalY += 12;
+        doc.text(`Nama: ${rpData.preparedByName || ''}`, margin, finalY);
+        doc.text(`Nama: ${rpData.checkedByName || ''}`, margin + colWidth, finalY);
+        doc.text(`Nama: ${rpData.approvedByName || ''}`, margin + colWidth * 2, finalY);
+
+        finalY += 12;
+        doc.text(`Tanggal: ${rpData.preparedByDate || ''}`, margin, finalY);
+        doc.text(`Tanggal: ${rpData.checkedByDate || ''}`, margin + colWidth, finalY);
+        doc.text(`Tanggal: ${rpData.approvedByDate || ''}`, margin + colWidth * 2, finalY);
+
+        const pdfDataUri = doc.output('datauristring');
+        DOMElements.pdfPreviewIframe.src = pdfDataUri;
+        DOMElements.pdfPreviewModal.classList.remove('hidden');
+
+        const downloadHandler = () => {
+            doc.save(`Laporan_${project.name.replace(/\s+/g, '_')}.pdf`);
+        };
+        
+        DOMElements.downloadPdfBtn.onclick = downloadHandler;
+
         hideLoader();
     };
 
@@ -1300,6 +1404,7 @@ document.addEventListener('DOMContentLoaded', () => {
         DOMElements.saveRescuePlanBtn.addEventListener('click', saveRescuePlan);
         DOMElements.cancelRescuePlanBtn.addEventListener('click', closeRescuePlanModal);
         DOMElements.addTeamMemberBtn.addEventListener('click', () => addTeamMemberRow());
+        DOMElements.closePreviewBtn.addEventListener('click', () => DOMElements.pdfPreviewModal.classList.add('hidden'));
         document.getElementById('alert-ok-btn').addEventListener('click', () => document.getElementById('alert-modal').classList.add('hidden'));
         
         window.addEventListener('keydown', (e) => {
@@ -1321,6 +1426,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Inisialisasi Aplikasi ---
     async function initialize() {
+        // Fitur untuk membersihkan cache jika diminta
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('clear') === 'true') {
+            showLoader('Menghapus cache dan memulai ulang...');
+            await idb.deleteDB('RescuePlanDB');
+            window.location.href = window.location.pathname;
+            return; 
+        }
+
         pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js`;
         
         const imageResizeObserver = new ResizeObserver(entries => {
