@@ -1426,15 +1426,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Inisialisasi Aplikasi ---
     async function initialize() {
-        // Fitur untuk membersihkan cache jika diminta
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('clear') === 'true') {
-            showLoader('Menghapus cache dan memulai ulang...');
-            await idb.deleteDB('RescuePlanDB');
-            window.location.href = window.location.pathname;
-            return; 
-        }
-
         pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js`;
         
         const imageResizeObserver = new ResizeObserver(entries => {
@@ -1448,14 +1439,14 @@ document.addEventListener('DOMContentLoaded', () => {
         imageResizeObserver.observe(DOMElements.mainImage);
         
         await initDB();
-        await loadState();
+        
+        // Hapus semua data yang tersimpan setiap kali aplikasi dibuka
+        await db.clear('projects');
+        await db.clear('appState');
 
+        // Lanjutkan dengan inisialisasi normal (tanpa memuat state lama)
         renderProjectList();
-        if (appState.activeProjectName && appState.projects[appState.activeProjectName]) {
-            switchProject(appState.activeProjectName);
-        } else {
-            switchProject(null);
-        }
+        switchProject(null);
         setMode('pan');
         setTool('select');
         document.querySelector('.color-swatch').classList.add('active');
